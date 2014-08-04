@@ -28,6 +28,9 @@
 #define PICC_REQIDL           0x26
 #define PICC_REQALL           0x52
 #define PICC_ANTICOLL         0x93
+#define PICC_ANTICOLL2 	      0x95 // anticollision level 2
+#define PICC_ANTICOLL3 	      0x97 // anticollision level 3
+
 #define PICC_SElECTTAG        0x93
 #define PICC_AUTHENT1A        0x60
 #define PICC_AUTHENT1B        0x61
@@ -133,6 +136,7 @@ class Mfrc522
 		unsigned char Request(unsigned char reqMode, unsigned char *TagType);
 		unsigned char ToCard(unsigned char command, unsigned char *sendData, unsigned char sendLen, unsigned char *backData, unsigned int *backLen);
 		unsigned char Anticoll(unsigned char *serNum);
+		unsigned char Anticoll2(unsigned char *serNum);
 		void CalulateCRC(unsigned char *pIndata, unsigned char len, unsigned char *pOutData);
 		unsigned char SelectTag(unsigned char *serNum);
 		unsigned char Auth(unsigned char authMode, unsigned char BlockAddr, unsigned char *Sectorkey, unsigned char *serNum);
