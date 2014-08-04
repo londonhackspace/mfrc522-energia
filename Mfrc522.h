@@ -138,7 +138,9 @@ class Mfrc522
 		unsigned char Anticoll(unsigned char *serNum);
 		unsigned char Anticoll2(unsigned char *serNum);
 		void CalulateCRC(unsigned char *pIndata, unsigned char len, unsigned char *pOutData);
-		unsigned char SelectTag(unsigned char *serNum);
+		unsigned char SelectTag(unsigned char *serNum, unsigned char *sak);
+		unsigned char SelectTag2(unsigned char *serNum, unsigned char *sak);
+		unsigned char RATS(unsigned char *recvData, uint *pLen);
 		unsigned char Auth(unsigned char authMode, unsigned char BlockAddr, unsigned char *Sectorkey, unsigned char *serNum);
 		unsigned char ReadBlock(unsigned char blockAddr, unsigned char *recvData);
 		unsigned char WriteBlock(unsigned char blockAddr, unsigned char *writeData);

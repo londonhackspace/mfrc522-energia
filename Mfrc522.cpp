@@ -9,12 +9,22 @@
 #include <Mfrc522.h>
 #include <SPI.h>
 
+/*
+ * for some reason you have to put:
+ 
+pinMode(chipSelectPin, OUTPUT);
+pinMode(NRSTPD, OUTPUT);
+digitalWrite(NRSTPD, HIGH);
+
+in your setup function.
+
+ */
 Mfrc522::Mfrc522(int chipSelectPin, int NRSTPD)
 {
-	pinMode(chipSelectPin, OUTPUT);
 	_chipSelectPin = chipSelectPin;
-	pinMode(NRSTPD, OUTPUT);
-	digitalWrite(NRSTPD, HIGH);
+/*	pinMode(chipSelectPin, OUTPUT);
+ 	pinMode(NRSTPD, OUTPUT);
+	digitalWrite(NRSTPD, HIGH);*/
 	_NRSTPD = NRSTPD;
 }
 
@@ -337,19 +347,19 @@ unsigned char Mfrc522::Anticoll(unsigned char *serNum)
 //ANTICOLL cascading level 2
 unsigned char Mfrc522::Anticoll2(unsigned char *serNum)
 {
-    uchar status;
-    uchar i;
-    uchar serNumCheck=0;
-    uint unLen;
+    unsigned char status;
+    unsigned char i;
+    unsigned char serNumCheck=0;
+    unsigned int unLen;
 
 
     //ClearBitMask(Status2Reg, 0x08); //TempSensclear
     //ClearBitMask(CollReg,0x80); //ValuesAfterColl
-    Write_MFRC522(BitFramingReg, 0x00);	//TxLastBists = BitFramingReg[2..0]
+    Mfrc522(BitFramingReg, 0x00);	//TxLastBists = BitFramingReg[2..0]
 
     serNum[0] = PICC_ANTICOLL2;
     serNum[1] = 0x20;
-    status = MFRC522_ToCard(PCD_TRANSCEIVE, serNum, 2, serNum, &unLen);
+    status = ToCard(PCD_TRANSCEIVE, serNum, 2, serNum, &unLen);
 
     if (status == MI_OK)
     {
@@ -366,6 +376,31 @@ unsigned char Mfrc522::Anticoll2(unsigned char *serNum)
 
     //SetBitMask(CollReg, 0x80); //ValuesAfterColl=1
 
+    return status;
+}
+
+//send RATS and returns ATS
+unsigned char Mfrc522::RATS(unsigned char *recvData, unsigned int *pLen)
+{
+    unsigned char status;
+    unsigned int unLen = 0;
+
+    recvData[0] = 0xE0; // RATS
+    recvData[1] = 0x50; // FSD=128, CID=0
+    CalulateCRC(recvData,2, &recvData[2]);
+    status = ToCard(PCD_TRANSCEIVE, recvData, 4, recvData, &unLen);
+    /*
+Serial.print("unLen: ");
+Serial.print(unLen, HEX);
+/*Serial.print(" status: ");
+Serial.print(status, HEX);
+Serial.println("");
+*/
+    //TODO
+    //if ((status != MI_OK) || (unLen != 0x90))
+    //{
+    // status = MI_ERR;
+    //}
     return status;
 }
 
@@ -408,7 +443,7 @@ void Mfrc522::CalulateCRC(unsigned char *pIndata, unsigned char len, unsigned ch
  * Input parameter：serNum--Send card serial number
  * return：return the card storage volume
  */
-unsigned char Mfrc522::SelectTag(unsigned char *serNum)
+unsigned char Mfrc522::SelectTag(unsigned char *serNum, unsigned char *sak)
 {
 	unsigned char i;
 	unsigned char status;
@@ -426,6 +461,8 @@ unsigned char Mfrc522::SelectTag(unsigned char *serNum)
 	}
 	CalulateCRC(buffer, 7, &buffer[7]);		//??
 	status = ToCard(PCD_TRANSCEIVE, buffer, 9, buffer, &recvBits);
+
+	*sak = buffer[0];
 	
 	if ((status == MI_OK) && (recvBits == 0x18))
 	{   
@@ -439,6 +476,48 @@ unsigned char Mfrc522::SelectTag(unsigned char *serNum)
 	return size;
 }
 
+unsigned char Mfrc522::SelectTag2(unsigned char *serNum, unsigned char *sak)
+{
+    unsigned char i;
+    unsigned char status;
+    //unsigned char size;
+    uint recvBits;
+    unsigned char buffer[9];
+    //unsigned char buffCheck=0;
+
+    //ClearBitMask(Status2Reg, 0x08); //MFCrypto1On=0
+
+    buffer[0] = PICC_ANTICOLL2;
+    buffer[1] = 0x70;
+    for (i=0; i<5; i++)
+    {
+     buffer[i+2] = *(serNum+i);
+    }
+    CalulateCRC(buffer, 7, &buffer[7]);
+    status = ToCard(PCD_TRANSCEIVE, buffer, 9, buffer, &recvBits);
+    //TODO: the above call returns 2 instead of MI_OK -> why?
+    status = MI_OK;
+    //Serial.print("recvBits: ");
+    //Serial.print(recvBits, DEC);
+    /*
+for (i=0; i<recBits / 8; i++)
+{
+buff[i] = *(buffer+i);
+}*/
+    //dumpHex((char*)buffer, recvBits / 8);
+    *sak = buffer[0];
+    //Verify received buffer
+    /* TODO
+for (i=0; i< recvBits/8; i++)
+{
+buffCheck ^= buffer[i];
+}
+if (buffCheck != buffer[i])
+{
+status = MI_ERR;
+}*/
+    return status;
+}
 
 /*
  * Function：Auth
